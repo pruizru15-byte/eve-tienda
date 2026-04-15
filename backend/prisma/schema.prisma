@@ -1,0 +1,357 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  name               String
+  email              String         @unique
+  password_hash      String
+  role               String         @default("USER")
+  avatar_url         String?
+  is_verified        Boolean        @default(false)
+  verification_token String?
+  reset_token        String?
+  reset_expires      DateTime?
+  created_at         DateTime       @default(now())
+  is_online          Boolean        @default(false)
+  last_activity      DateTime?
+  last_page_view     String?
+  visit_count        Int            @default(0)
+  total_spent        Float          @default(0)
+  is_active          Boolean        @default(true)
+  terms_accepted     Boolean        @default(false)
+  terms_accepted_at  DateTime?
+  ForumComments      ForumComment[]
+  ForumTopics        ForumTopic[]
+  orders             Order[]
+  reactions          Reaction[]
+  ratings            ProductRating[]
+  notifications      Notification[]
+  contactMessages    ContactMessage[]
+}
+
+model Order {
+  id         String   @id @default(uuid())
+  user_id    String
+  total      Float
+  status     String   @default("PENDING")
+  items      String
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id])
+}
+
+model ProductCategory {
+  id                String             @id @default(uuid())
+  name              String
+  icon              String?
+  is_active         Boolean            @default(true)
+  products          Product[]
+  featured_category FeaturedCategory[]
+}
+
+model Promotion {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  discount    Int       @default(0)
+  image_url   String
+  is_active   Boolean   @default(true)
+  expires_at  DateTime?
+  created_at  DateTime  @default(now())
+}
+
+model Offer {
+  id          String   @id @default(uuid())
+  product_id  String?
+  title       String
+  description String   @default("¡Oferta exclusiva de tiempo limitado!")
+  discount    Int      @default(0)
+  image_url   String?
+  end_date    DateTime
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  product     Product? @relation(fields: [product_id], references: [id])
+}
+
+model Product {
+  id               String          @id @default(uuid())
+  category_id      String
+  name             String
+  price            Float
+  original_price   Float?
+  rating           Float           @default(0)
+  reviews_count    Int             @default(0)
+  image_url        String
+  badge            String?
+  description      String
+  featured         Boolean         @default(false)
+  is_hero_carousel Boolean         @default(false)
+  specs            String?
+  is_active        Boolean          @default(true)
+  stock            Int              @default(0)
+  purchase_price   Float            @default(0)
+  wholesale_price  Float            @default(0)
+  unit_price       Float            @default(0)
+  min_stock_alert  Int              @default(5)
+  created_at       DateTime         @default(now())
+  offers           Offer[]
+  bundle_items     BundleItem[]
+  tempting_offers  TemptingOffer[]
+  category         ProductCategory  @relation(fields: [category_id], references: [id])
+  ratings          ProductRating[]
+}
+
+model ProductRating {
+  id         String   @id @default(uuid())
+  product_id String
+  user_id    String
+  rating     Int      // 1 to 5
+  comment    String?
+  created_at DateTime @default(now())
+  product    Product  @relation(fields: [product_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id])
+}
+
+model TemptingOffer {
+  id          String   @id @default(uuid())
+  product_id  String
+  subtitle    String
+  title       String
+  button_text String   @default("¡LO QUIERO!")
+  image_url   String
+  is_active   Boolean  @default(true)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  product     Product  @relation(fields: [product_id], references: [id])
+}
+
+model ServiceCategory {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  is_active   Boolean   @default(true)
+  services    Service[]
+}
+
+model Service {
+  id               String          @id @default(uuid())
+  category_id      String
+  title            String
+  description      String
+  long_description String
+  price_model      String
+  price            Float           @default(0)
+  features         String?
+  icon             String
+  whatsapp_number  String?
+  trust_text       String?
+  contact_options  String?         // JSON for the 3 selectors
+  is_active        Boolean         @default(true)
+  category         ServiceCategory @relation(fields: [category_id], references: [id])
+}
+
+model ForumTopic {
+  id          String         @id @default(uuid())
+  author_id   String
+  title       String
+  content     String
+  media_url   String?
+  media_type  String?
+  views_count Int            @default(0)
+  likes_count Int            @default(0)
+  is_active   Boolean        @default(true)
+  created_at  DateTime       @default(now())
+  comments    ForumComment[]
+  author      User           @relation(fields: [author_id], references: [id])
+  reactions   Reaction[]
+}
+
+model ForumComment {
+  id         String     @id @default(uuid())
+  topic_id   String
+  author_id  String
+  content    String
+  media_url  String?
+  media_type String?
+  is_active  Boolean    @default(true)
+  created_at DateTime   @default(now())
+  author     User       @relation(fields: [author_id], references: [id])
+  topic      ForumTopic @relation(fields: [topic_id], references: [id])
+  reactions  Reaction[]
+}
+
+model Reaction {
+  id         String        @id @default(uuid())
+  type       String
+  user_id    String
+  topic_id   String?
+  comment_id String?
+  created_at DateTime      @default(now())
+  comment    ForumComment? @relation(fields: [comment_id], references: [id])
+  topic      ForumTopic?   @relation(fields: [topic_id], references: [id])
+  user       User          @relation(fields: [user_id], references: [id])
+}
+
+model DynamicPage {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  title      String
+  content    String
+  updated_at DateTime @updatedAt
+}
+
+model ContactMessage {
+  id         String   @id @default(uuid())
+  user_id    String?  
+  name       String
+  email      String
+  subject    String?
+  message    String
+  reply      String?
+  status     String   @default("UNREAD") // UNREAD, READ, REPLIED
+  created_at DateTime @default(now())
+  replied_at DateTime?
+  user       User?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
+}
+
+model CompanySettings {
+  id                    String   @id @default("singleton")
+  about_innovation      String   @default("Innovación con Propósito")
+  about_team            String   @default("Nuestro Equipo")
+  about_mission         String   @default("Misión")
+  about_values          String   @default("Valores")
+  about_innovation_text String   @default("En NovaTech, no solo vendemos tecnología, construimos el futuro de tu negocio con pasión y excelencia técnica.")
+  about_team_text       String   @default("Expertos multidisciplinarios en desarrollo, diseño y análisis de datos enfocados en tu éxito.")
+  about_mission_text    String   @default("Empoderar a empresas y estudiantes mediante soluciones digitales de vanguardia y asesoría académica de alto nivel.")
+  about_values_text     String   @default("Transparencia, innovación constante y compromiso inquebrantable con la calidad en cada entrega.")
+  contact_email         String   @default("hola@novatech.com")
+  contact_phone         String   @default("+1 234 567 890")
+  contact_location      String   @default("Distrito Tecnológico, Silicon Valley")
+  social_facebook       String   @default("#")
+  social_instagram      String   @default("#")
+  social_twitter        String   @default("#")
+  social_linkedin       String   @default("#")
+  social_github         String   @default("#")
+  target_email          String   @default("admin@novatech.com")
+  custom_project_title  String   @default("¿Necesitas algo a medida?")
+  custom_project_text   String   @default("Contáctanos para proyectos personalizados que no encuentras en nuestro catálogo.")
+  whatsapp_main_number  String   @default("1234567890")
+  updated_at            DateTime @updatedAt
+}
+
+model HelpSection {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  content     String
+  is_active   Boolean  @default(true)
+  order_index Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model StoreSettings {
+  id         String   @id @default("singleton")
+  hero_mode  String   @default("AUTO")
+  updated_at DateTime @updatedAt
+}
+
+model Bundle {
+  id         String       @id @default(uuid())
+  title      String
+  image_url  String
+  is_active  Boolean      @default(true)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+  items      BundleItem[]
+}
+
+model BundleItem {
+  id          String   @id @default(uuid())
+  bundle_id   String
+  product_id  String
+  order_index Int      @default(0)
+  bundle      Bundle   @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [product_id], references: [id])
+}
+
+model FeaturedCategory {
+  id            String           @id @default(uuid())
+  category_id   String?
+  name          String
+  image_url     String
+  product_count Int              @default(0)
+  order         Int              @default(0)
+  is_active     Boolean          @default(true)
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+  category      ProductCategory? @relation(fields: [category_id], references: [id])
+}
+
+model VanguardSection {
+  id               String            @id @default("singleton")
+  badge_top        String            @default("EXPERIENCIA DE ÉLITE")
+  title            String            @default("Liderado por Ingeniería de Vanguardia")
+  quote_text       String
+  author_name      String            @default("Ing. Nova S.")
+  author_role      String            @default("Founder & Lead Tech Architect")
+  main_image_url   String
+  image_badge_text String            @default("100% FIABILIDAD")
+  updated_at       DateTime          @updatedAt
+  features         VanguardFeature[]
+}
+
+model VanguardFeature {
+  id          String          @id @default(uuid())
+  vanguard_id String
+  icon_name   String
+  title       String
+  description String
+  vanguard    VanguardSection @relation(fields: [vanguard_id], references: [id], onDelete: Cascade)
+}
+
+model ContactSettings {
+  id              String   @id @default("singleton")
+  support_email   String   @default("soporte@novatech-store.com")
+  email_subtext   String   @default("Respuesta en menos de 2h")
+  phone           String   @default("+54 9 11 1234 5678")
+  phone_subtext   String   @default("Lunes a Viernes 9:00 - 18:00")
+  address_line1   String   @default("Torre Titanium, Piso 42, Hub Tecnológico")
+  address_line2   String   @default("Buenos Aires, Argentina")
+  linkedin_url    String   @default("#")
+  twitter_url     String   @default("#")
+  github_url      String   @default("#")
+  updated_at      DateTime @updatedAt
+}
+
+model LocationHistory {
+  id         String   @id @default(uuid())
+  user_id    String?  
+  name       String   
+  province   String?
+  region     String?
+  country    String?
+  is_current Boolean  @default(false)
+  created_at DateTime @default(now())
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  user_id    String
+  title      String
+  message    String
+  type       String   @default("info") // info, success, alert, promo
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
